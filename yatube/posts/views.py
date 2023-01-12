@@ -1,36 +1,23 @@
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
 from .models import Group, Post, User
 from .forms import PostForm
-
-NUMBERS_POSTS_ON_PAGES = 10
-NUMBERS_PAGES = 10
+from .utils import get_page
 
 
 def index(request):
-    post_list = Post.objects.all()
-    paginator = Paginator(post_list, NUMBERS_PAGES)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    context = {
-        'page_obj': page_obj,
-    }
+    context = get_page(Post.objects.select_related('group').all(), request)
     return render(request, 'posts/index.html', context)
 
 
 def group_posts(request, slug):
     group = get_object_or_404(Group, slug=slug)
-    post_list = Post.objects.filter()[:NUMBERS_POSTS_ON_PAGES]
-    paginator = Paginator(post_list, NUMBERS_PAGES)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    title = f'Группа {slug}'
+    post_list = Post.objects.select_related('group').all()
     context = {
-        'page_obj': page_obj,
         'group': group,
-        'title': title
+        'post_list': post_list
     }
+    context.update(get_page(group.posts.all(), request))
     return render(request, 'posts/group_list.html', context)
 
 
@@ -38,19 +25,17 @@ def post_detail(request, post_id):
     post = get_object_or_404(Post, id=post_id)
     posts_list = (Post.objects.select_related('author')
                   .filter(author=post.author))
-    posts_count = posts_list.count()
     context = {
         'post': post,
-        'posts_count': posts_count
+        'posts_list': posts_list
     }
     return render(request, 'posts/post_detail.html', context)
 
 
 @login_required
 def post_create(request):
-    form = PostForm()
+    form = PostForm(request.POST or None)
     if request.method == 'POST':
-        form = PostForm(request.POST)
         if form.is_valid():
             post = form.save(commit=False)
             post.author = request.user
@@ -63,17 +48,10 @@ def post_create(request):
 
 def profile(request, username):
     author = get_object_or_404(User, username=username)
-    posts = author.posts.all()
-    posts_count = posts.count()
-    paginator = Paginator(posts, NUMBERS_PAGES)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
     context = {
         'author': author,
-        'post_list': posts,
-        'page_obj': page_obj,
-        'posts_count': posts_count,
     }
+    context.update(get_page(author.posts.all(), request))
     return render(request, 'posts/profile.html', context)
 
 
@@ -81,7 +59,7 @@ def profile(request, username):
 def post_edit(request, post_id):
     is_edit = True
     post = get_object_or_404(Post, id=post_id)
-    form = PostForm()
+    form = PostForm(request.POST or None)
     if request.method == 'POST':
         form = PostForm(request.POST, instance=post)
         if form.is_valid():
