@@ -8,7 +8,7 @@
               Дата публикации: {{ post.pub_date|date:"d E Y" }} 
             </li>
             {% if post.group %}   
-              <a href="{% url 'posts:group_posts' post.group.slug %}">все записи группы</a>
+              <a href="{% url 'posts:group_list' post.group.slug %}">все записи группы</a>
             {% endif %}
             <li class="list-group-item">
               Автор: {{ post.author }} 
@@ -17,7 +17,7 @@
               Всего постов автора:  <span >{{ post.author.posts.count }} </span>
             </li>
             <li class="list-group-item">
-            <a href="{% url 'posts:profile' post.author%}"
+            <a href="{% url 'posts:profile' post.author.username %}"
               все посты пользователя
             </a>
             </li>
